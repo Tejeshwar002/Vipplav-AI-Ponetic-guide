@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vipplav Telugu Phonetic Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+    <div class="bg-white shadow-lg rounded p-8 max-w-lg w-full">
+        <h1 class="text-2xl font-bold mb-4">Vipplav Telugu Phonetic Tool</h1>
+        <div  class="text-xl mb-4"><p id="teluguText"></p></div>
+        <div class="mb-4">
+            <label for="romanisedInputs" class="block text-gray-700">Romanised Inputs</label>
+            <input type="text" id="romanisedInputs" class="border rounded w-full py-2 px-3 text-gray-700" placeholder="Enter Romanised Inputs">
+        </div>
+        <div class="mb-4">
+            <label for="phoneticGuide" class="block text-gray-700">Phonetic Guide</label>
+            <input type="text" id="phoneticGuide" class="border rounded w-full py-2 px-3 text-gray-700" placeholder="Enter Phonetic Guide">
+        </div>
+        <div class="flex justify-between">
+            <button id="prevBtn" class="bg-gray-500 text-white px-4 py-2 rounded">Previous</button>
+            <button id="nextBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Save and Next</button>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.2/axios.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
