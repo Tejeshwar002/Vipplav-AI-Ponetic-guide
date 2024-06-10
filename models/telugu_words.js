@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
-const Counter = require('./counter'); // Import the Counter model
+const Counter = require('./counter');
 
 const teluguTextSchema = new mongoose.Schema({
     _id: { type: Number, required: true },
-    text: String,
+    text: { type: String, required: true },
     romanisedInputs: String,
     phoneticGuide: String,
 });

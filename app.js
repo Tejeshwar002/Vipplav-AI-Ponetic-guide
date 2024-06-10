@@ -1,79 +1,82 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const response = await axios.get('http://localhost:3000/telugu-text');
-        const data = response.data;
+const express = require('express');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const path = require('path');
+const MongoStore = require('connect-mongo');
+const cors = require('cors');
 
-        if (data && data.Telugu_Words) {
-            showTextDetails(data);
-        } else {
-            document.getElementById('teluguText').innerText = 'No Telugu text found';
+const app = express();
+
+// Connect to MongoDB
+mongoose.connect('mongodb://127.0.0.1:27017/excel', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('Connected to MongoDB');
+}).catch(err => {
+    console.error('Could not connect to MongoDB', err);
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(session({
+    secret: 'xyz123',
+    resave: false,
+    saveUninitialized: true,
+    store: MongoStore.create({ mongoUrl: 'mongodb://127.0.0.1:27017/telugu_words' }),
+    cookie: { maxAge: 60000 } // Session expires after 60 seconds
+}));
+
+// Session expiration middleware
+app.use(async (req, res, next) => {
+    if (req.session) {
+        const now = Date.now();
+        if (!req.session.viewedItems) {
+            req.session.viewedItems = [];
         }
-    } catch (error) {
-        console.error('Error fetching initial Telugu text:', error);
+
+        if (req.session.lastAccess && now - req.session.lastAccess > req.session.cookie.maxAge) {
+            // Session expired
+            const Telugu_Words = require('./models/telugu_words');
+            const SavedTelugu_Words = require('./models/saved_telugu_words');
+
+            for (const itemId of req.session.viewedItems) {
+                const textData = await Telugu_Words.findById(itemId);
+                if (textData) {
+                    const savedTextData = new SavedTelugu_Words(textData.toObject());
+                    await savedTextData.save();
+                    await Telugu_Words.findByIdAndDelete(itemId);
+                }
+            }
+
+            req.session.destroy(err => {
+                if (err) {
+                    return next(err);
+                }
+                res.send('Session expired and data saved');
+            });
+        } else {
+            req.session.lastAccess = now;
+            next();
+        }
+    } else {
+        next();
     }
 });
 
-function handleNextClick() {
-    const romanisedInputs = document.getElementById('romanisedInputs').value;
-    const phoneticGuide = document.getElementById('phoneticGuide').value;
-    const lastId = document.getElementById('teluguText').dataset.lastId;
+// Routes
+const teluguRoutes = require('./routes/telugu');
+app.use('/api', (req, res, next) => {
+    req.session.viewedItems = req.session.viewedItems || [];
+    next();
+}, teluguRoutes);
 
-    updateCurrentText(romanisedInputs, phoneticGuide, lastId)
-        .then(() => fetchNextText())
-        .catch(console.error);
-}
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-async function updateCurrentText(romanisedInputs, phoneticGuide, lastId) {
-    try {
-        await axios.post('http://127.0.0.1:3000/update-telugu-text', {
-            _id: lastId,
-            romanisedInputs,
-            phoneticGuide
-        });
-    } catch (error) {
-        console.error('Error updating current Telugu text:', error);
-    }
-}
-
-async function fetchNextText() {
-    const lastId = document.getElementById('teluguText').dataset.lastId;
-
-    try {
-        const response = await axios.get(`http://127.0.0.1:3000/next-telugu-text?lastId=${lastId}`);
-        const data = response.data;
-
-        if (data && data.Telugu_Words) {
-            showTextDetails(data);
-        } else {
-            document.getElementById('teluguText').innerText = 'No more Telugu text found';
-        }
-    } catch (error) {
-        console.error('Error fetching next Telugu text:', error);
-    }
-}
-
-function showTextDetails(data) {
-    document.getElementById('teluguText').innerText = data.Telugu_Words;
-    document.getElementById('teluguText').dataset.lastId = data._id;
-    document.getElementById('romanisedInputs').value = data.romanisedInputs || '';
-    document.getElementById('phoneticGuide').value = data.phoneticGuide || '';
-}
-
-document.getElementById('nextBtn').addEventListener('click', handleNextClick);
-
-document.getElementById('prevBtn').addEventListener('click', async () => {
-    const lastId = document.getElementById('teluguText').dataset.lastId;
-
-    try {
-        const response = await axios.get(`http://127.0.0.1:3000/previous-telugu-text?lastId=${lastId}`);
-        const data = response.data;
-
-        if (data && data.Telugu_Words) {
-            showTextDetails(data);
-        } else {
-            document.getElementById('teluguText').innerText = 'No previous Telugu text found';
-        }
-    } catch (error) {
-        console.error('Error fetching previous Telugu text:', error);
-    }
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
